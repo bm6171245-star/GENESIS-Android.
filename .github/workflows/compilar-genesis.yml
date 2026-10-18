@@ -1,0 +1,52 @@
+
+name: Compilar GENESIS APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Descargar proyecto
+        uses: actions/checkout@v4
+
+      - name: Preparar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Preparar Android
+        uses: android-actions/setup-android@v4
+
+      - name: Instalar Android SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Extraer proyecto GENESIS
+        run: unzip -q eefuente_APK.zip -d genesis
+
+      - name: Verificar archivos
+        working-directory: genesis
+        run: python3 tools/verificar_fuentes.py
+
+      - name: Compilar APK
+        working-directory: genesis
+        run: gradle --no-daemon :app:assembleDebug --stacktrace
+
+      - name: Publicar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GENESIS-APK
+          path: genesis/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
